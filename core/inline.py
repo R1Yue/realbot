@@ -575,7 +575,7 @@ async def handle_inline_query(query: InlineQuery):
     await query.answer(results=[
         InlineQueryResultArticle(
             id="2",
-            title=f"嘿，你好啊 {query.from_user.full_name}！",
+            title=f"嘿，你好啊 {query.from_user.full_name if query.from_user else '宋冬'}！",
             input_message_content=InputTextMessageContent(
                 message_text="小娜😭",
                 parse_mode=ParseMode.MARKDOWN
