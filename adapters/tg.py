@@ -6,17 +6,27 @@ from os import getenv
 from aiogram import Bot, Dispatcher, Router
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.filters import CommandStart, Command, IS_NOT_MEMBER, IS_MEMBER, ChatMemberUpdatedFilter
+from aiogram.filters import (
+    CommandStart,
+    Command,
+    IS_NOT_MEMBER,
+    IS_MEMBER,
+    ChatMemberUpdatedFilter,
+)
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram import F
 
 from adapters.scheduler.core import get_all_unended_jobs, Scheduler
-from core.anti_fake_users import handle_anonymous_channel_msgs, handle_channel_manage_command
+from core.anti_fake_users import (
+    handle_anonymous_channel_msgs,
+    handle_channel_manage_command,
+)
 from core.cfg import handle_config_command
 from core.inline import handle_inline_query
 from core.ip import handle_ip_command
 from core.lottery import router as lottery_router, handle_lottery_command
 from core.mc import handle_mc_status_command
+#from core.tarot_parse import router as tarot_parse_router, handle_tarot_parse_command
 from core.middleware.anti_fake_channel import AntiFakeChannelUsersMiddleware
 from core.post_to_fedi import router as fedi_router
 
@@ -26,8 +36,16 @@ from core.post_to_fedi import handle_auth, handle_post_to_fedi
 from core.promote import handle_promote_command
 from core.repeater import MessageRepeater
 from core.report_links import report_broken_links
-from core.simple import handle_start_command, handle_baka, dummy_handler, handle_info_command, handle_ping_command, \
-    handle_tips_command, handle_about_command, handle_nexusmods_id
+from core.simple import (
+    handle_start_command,
+    handle_baka,
+    dummy_handler,
+    handle_info_command,
+    handle_ping_command,
+    handle_tips_command,
+    handle_about_command,
+    handle_nexusmods_id,
+)
 from core.actions import handle_actions, handle_reverse_actions
 from core.stats import handle_stats_command
 from core.middleware.stats import MessageStatsMiddleware
@@ -39,6 +57,7 @@ TOKEN = getenv("BOT_TOKEN")
 
 class TelegramAdapter:
     bot = None
+
     def __init__(self):
         self.dp = Dispatcher()
         self.stats_middleware = MessageStatsMiddleware()
@@ -52,7 +71,7 @@ class TelegramAdapter:
         self.bot = Bot(
             token=TOKEN,
             default=DefaultBotProperties(parse_mode=ParseMode.HTML),
-            session=session
+            session=session,
         )
         self.__class__.bot = self.bot
 
@@ -63,6 +82,7 @@ class TelegramAdapter:
         if pending:
             logging.info("Recovering jobs...")
             from adapters.scheduler.lottery import recover_lottery_jobs
+
             await recover_lottery_jobs()
 
     def _setup_handlers(self):
@@ -76,58 +96,73 @@ class TelegramAdapter:
 
         # Register handlers on router
         router.message(CommandStart())(handle_start_command)
-        router.message(Command('info'))(handle_info_command)
-        router.message(Command('about'))(handle_about_command)
-        router.message(Command('ping'))(handle_ping_command)
-        router.message(Command('tips'))(handle_tips_command)
+        router.message(Command("info"))(handle_info_command)
+        router.message(Command("about"))(handle_about_command)
+        router.message(Command("ping"))(handle_ping_command)
+        router.message(Command("tips"))(handle_tips_command)
         # bitflip 模块
-        router.message(Command('bitflip'))(handle_bitflip_command)
+        router.message(Command("bitflip"))(handle_bitflip_command)
         # config 模块
-        router.message(Command('config'))(handle_config_command)
+        router.message(Command("config"))(handle_config_command)
         # promote 模块
-        router.message(Command('t'))(handle_promote_command)
+        router.message(Command("t"))(handle_promote_command)
         # stats 模块
-        router.message(Command('stats'))(handle_stats_command)
+        router.message(Command("stats"))(handle_stats_command)
         # fedi 模块
-        router.message(Command('fauth'))(handle_auth)
-        router.message(Command('post'))(handle_post_to_fedi)
+        router.message(Command("fauth"))(handle_auth)
+        router.message(Command("post"))(handle_post_to_fedi)
         # ip 模块
-        router.message(Command('ip'))(handle_ip_command)
+        router.message(Command("ip"))(handle_ip_command)
         # link 模块
-        router.message(Command('report_broken_links'))(report_broken_links)
-        router.message(F.text.contains('http') & ~F.text.contains('/report_broken_links'))(handle_tg_links)
+        router.message(Command("report_broken_links"))(report_broken_links)
+        router.message(
+            F.text.contains("http") & ~F.text.contains("/report_broken_links")
+        )(handle_tg_links)
         # mc 模块
-        router.message(Command('mc'))(handle_mc_status_command)
+        router.message(Command("mc"))(handle_mc_status_command)
         # 抽奖模块
-        router.message(Command('lottery'))(handle_lottery_command)
+        router.message(Command("lottery"))(handle_lottery_command)
+        # 塔罗牌解牌模块
+        #router.message(Command("tarot_parse"))(handle_tarot_parse_command)
         # unpin 模块
         # 不知道为什么检测不到频道的消息被置顶这个事件，暂时认为所有的频道消息都是被置顶的
-        #unpin_router.message(F.chat.type.in_({'group', 'supergroup'}) & F.sender_chat & (
+        # unpin_router.message(F.chat.type.in_({'group', 'supergroup'}) & F.sender_chat & (
         #            F.sender_chat.type == 'channel'))(
         #    handle_unpin_channel_message)
         # repeater 模块
         # 反频道马甲 anti_fake_users 模块
-        router.message(Command('fake'))(handle_channel_manage_command)
-        anti_anonymous_router.message(F.chat.type.in_({'group', 'supergroup'}) & F.sender_chat & ~F.is_automatic_forward)(handle_anonymous_channel_msgs)
+        router.message(Command("fake"))(handle_channel_manage_command)
+        anti_anonymous_router.message(
+            F.chat.type.in_({"group", "supergroup"})
+            & F.sender_chat
+            & ~F.is_automatic_forward
+        )(handle_anonymous_channel_msgs)
 
-        repeater_router.message(F.chat.type.in_({'group', 'supergroup'}))(MessageRepeater().handle_message)
-        router.message(F.text.regexp(r'(n|N) ?网尾号 ?[0-9]*'))(handle_nexusmods_id)
+        repeater_router.message(F.chat.type.in_({"group", "supergroup"}))(
+            MessageRepeater().handle_message
+        )
+        router.message(F.text.regexp(r"(n|N) ?网尾号 ?[0-9]*"))(handle_nexusmods_id)
         # welcome 模块
-        router.chat_member(ChatMemberUpdatedFilter(IS_NOT_MEMBER >> IS_MEMBER))(handle_tg_welcome)
-        router.message(F.text == '我是笨蛋')(handle_baka)
+        router.chat_member(ChatMemberUpdatedFilter(IS_NOT_MEMBER >> IS_MEMBER))(
+            handle_tg_welcome
+        )
+        router.message(F.text == "我是笨蛋")(handle_baka)
         # 在有更为妥当的方式检查命令触发者是不是原来的触发者之前先不启用
-        #router.message(F.text == '雪豹闭嘴')(handle_self_delete)
+        # router.message(F.text == '雪豹闭嘴')(handle_self_delete)
         router.inline_query()(handle_inline_query)
         # 捕获所有其他消息
-        dummy_router.message(F.chat.type.in_({'group', 'supergroup'}))(dummy_handler)
+        dummy_router.message(F.chat.type.in_({"group", "supergroup"}))(dummy_handler)
 
         # actions 模块
-        actions_router.message(F.chat.type.in_({'group', 'supergroup'}) & F.text.startswith('/'))(handle_actions)
-        actions_router.message(F.chat.type.in_({'group', 'supergroup'}) & F.text.startswith('\\'))(handle_reverse_actions)
-
+        actions_router.message(
+            F.chat.type.in_({"group", "supergroup"}) & F.text.startswith("/")
+        )(handle_actions)
+        actions_router.message(
+            F.chat.type.in_({"group", "supergroup"}) & F.text.startswith("\\")
+        )(handle_reverse_actions)
 
         # Include router in dispatcher
-        #self.dp.include_router(unpin_router)
+        # self.dp.include_router(unpin_router)
         # 通用的路由
         self.dp.include_router(router)
         self.dp.include_router(actions_router)
@@ -135,9 +170,9 @@ class TelegramAdapter:
         # 处理联邦宇宙认证相关
         self.dp.include_router(fedi_router)
         self.dp.include_router(lottery_router)
+        #self.dp.include_router(tarot_parse_router)
         self.dp.include_router(repeater_router)
         self.dp.include_router(dummy_router)
-
 
     def _setup_middleware(self):
         """注册中间件"""
