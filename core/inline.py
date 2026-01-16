@@ -292,6 +292,87 @@ async def handle_inline_query(query: InlineQuery):
                     description="发送原始文本")
             ], cache_time=0)
         return
+    if query_text.startswith("roll"):
+        roll_query = query_text.replace("roll", "", 1).strip()
+        import re
+        dice_pattern = r'(\d*)d(\d+)'  # 匹配 NdM 格式的骰子表达式
+        match = re.match(dice_pattern, roll_query)
+        if match:
+            num_dice = int(match.group(1)) if match.group(1) else 1
+            max_num = int(match.group(2))
+            if num_dice > 42:
+                await query.answer(results=[
+                    InlineQueryResultArticle(
+                        id="1",
+                        title="掷骰子数量过多",
+                        input_message_content=InputTextMessageContent(
+                            message_text="一次掷骰子数量不能超过 42 个。",
+                            parse_mode=None
+                        ),
+                        description="请减少掷骰子的数量。"
+                    )
+                ], cache_time=0)
+                return
+            from helpers.rand import get_random_dice_number
+            results = await get_random_dice_number(num_dice, max_num)
+            results_text = ', '.join(str(r) for r in results)
+            await query.answer(results=[
+                InlineQueryResultArticle(
+                    id="1",
+                    title="掷骰子结果",
+                    input_message_content=InputTextMessageContent(
+                        message_text=f"你掷了 {num_dice} 个 D{max_num} 骰子，结果是：{results_text}",
+                        parse_mode=None
+                    ),
+                    description=f"掷骰子结果：{results_text}"
+                )
+            ], cache_time=0)
+        else:
+            await query.answer(results=[
+                InlineQueryResultArticle(
+                    id="1",
+                    title="无效的掷骰子格式",
+                    input_message_content=InputTextMessageContent(
+                        message_text="请使用 NdM 格式来掷骰子，例如 '2d6' 表示掷两个六面骰。",
+                        parse_mode=None
+                    ),
+                    description="请提供有效的掷骰子表达式。"
+                )
+            ], cache_time=0)
+        return
+    if query_text.startswith("tarot") or query_text.startswith("塔罗"):
+        tarot_query = query_text.replace("tarot", "", 1).replace("塔罗", "",1).strip()
+        num_cards = 1
+        if tarot_query.isdigit():
+            num_cards = int(tarot_query)
+            if num_cards < 1 or num_cards > 10:
+                await query.answer(results=[
+                    InlineQueryResultArticle(
+                        id="1",
+                        title="无效的塔罗牌数量",
+                        input_message_content=InputTextMessageContent(
+                            message_text="请指定 1 到 10 张塔罗牌。",
+                            parse_mode=None
+                        ),
+                        description="请提供有效的塔罗牌数量。"
+                    )
+                ], cache_time=0)
+                return
+        from helpers.rand import get_random_tarot_card
+        tarot_result = await get_random_tarot_card(num_cards)
+        cards_text = '，'.join(tarot_result['cards'])
+        await query.answer(results=[
+            InlineQueryResultArticle(
+                id="1",
+                title="抽取的塔罗牌",
+                input_message_content=InputTextMessageContent(
+                    message_text=f"我抽取了 {num_cards} 张塔罗牌：\n<code>{cards_text}</code>\n* 此轮抽牌的随机种子为 {tarot_result['seed']}，来源于 drand 的第 {tarot_result['round']} 轮随机数据，抽牌结果仅供参考。",
+                    parse_mode=ParseMode.HTML
+                ),
+                description=f"{cards_text}"
+            )
+        ], cache_time=0)
+        return
     if query_text.startswith("bp"):
         blood_pressured_query = query_text.replace("bp", "", 1).strip()
         if blood_pressured_query:
