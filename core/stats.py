@@ -68,7 +68,7 @@ async def handle_stats_command(message: Message):
         text += "\n🍋 羡慕统计:\n"
         text += "<blockquote expandable>"
         for user_id, user_data in sorted_most_xm_users:
-            if user_data['xm_count'] > 0:
+            if user_data.get('xm_count',0) > 0:
                 name = user_data['name'] or user_data['username'] or str(user_id)
                 text += f"{name}: {user_data['xm_count']} 次羡慕\n"
         text += "</blockquote>\n\n"
@@ -76,7 +76,7 @@ async def handle_stats_command(message: Message):
         text += "\n🥬 卖菜统计:\n"
         text += "<blockquote expandable>"
         for user_id, user_data in sorted_most_wocai_users:
-            if user_data['wocai_count'] > 0:
+            if user_data.get('wocai_count',0) > 0:
                 name = user_data['name'] or user_data['username'] or str(user_id)
                 text += f"{name}: {user_data['wocai_count']} 次卖菜\n"
         text += "</blockquote>\n"
